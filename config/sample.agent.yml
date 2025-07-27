@@ -1,0 +1,226 @@
+# Common Creation Agent Configuration
+# 共通作成エージェント設定 - VoltAgent 1.x対応
+
+# サーバー設定
+server:
+  port: 3141
+
+# エージェント設定
+agent:
+  name: "Common Creation Agent"
+  description: "汎用AIエージェント - voltagent.devプラットフォームを基盤とした統合AIエージェント"
+  systemPrompt: |
+    # 重要
+    ユーザーが使用した言語で応答してください。
+
+    ## 例
+    - Hello -> 英語で応答する
+    - こんにちは -> 日本語で応答する
+    - 안녕하세요 → 韓国語で応答する
+
+    # あなたについて
+    あなたは Common Creation Agent です。
+    ユーザーの質問に対して適切で有益な回答を提供してください。
+    回答の精度を上げるために、ツールは積極的に使用してください。
+    とくに、調査タスクでは time ツールを使用して現在の日時を確認してから調べてください。
+    専門領域についてはサブエージェントに任せる方が、あなたよりも有益な回答を提供できるでしょう。
+    サブエージェントも積極的に活用してください。
+
+# LLM設定
+llm:
+  provider: "openai"  # openai | bedrock
+  model: "gpt-4o-mini"
+  apiKey: "${OPENAI_API_KEY}"  # 環境変数から取得
+  # reasoning:
+  #   effort: "minimal"  # minimal | low | medium | high (GPT-5用)
+
+# Memory設定（会話履歴・ベクトル検索・Working Memory）
+memory:
+  # 永続メモリの有効化（デフォルト: true）
+  enabled: true
+  
+  # LibSQLデータベースファイルパス（デフォルト: file:./data/memory.db）
+  path: "file:./data/memory.db"
+  
+  # ベクトル検索設定（セマンティック検索）
+  vector:
+    # ベクトル検索の有効化（デフォルト: false）
+    enabled: false
+    
+  # Embedding設定（ベクトル検索有効時に必須）
+  # メインLLMとは別のAPIキーを設定可能
+  embedding:
+    provider: "openai"  # openai | bedrock
+    model: "text-embedding-3-large"  # 推奨: text-embedding-3-large
+    apiKey: "${OPENAI_API_KEY}"  # メインLLMと同じキーでも可
+    # baseUrl: "http://localhost:1234/v1"  # OpenAI互換サーバーの場合
+    
+  # Working Memory設定（構造化された作業メモリ）
+  workingMemory:
+    # Working Memoryの有効化（デフォルト: false）
+    enabled: false
+    # 将来的にスキーマ定義を追加可能
+
+# AWS Bedrock設定（bedrockを使用する場合）
+# llm:
+#   provider: "bedrock"
+#   model: "anthropic.claude-3-5-sonnet-20241022-v2:0"
+#   region: "us-east-1"
+#   accessKeyId: "${AWS_ACCESS_KEY_ID}"
+#   secretAccessKey: "${AWS_SECRET_ACCESS_KEY}"
+# 
+# # Bedrock用Embedding設定（ベクトル検索有効時）
+# memory:
+#   enabled: true
+#   path: "file:./data/memory.db"
+#   vector:
+#     enabled: true
+#   embedding:
+#     provider: "bedrock"
+#     model: "amazon.titan-embed-text-v2:0"
+#     region: "us-east-1"
+
+# OpenAI互換サーバー設定（LM Studioなど）
+# llm:
+#   provider: "openai"
+#   model: "gpt-4o-mini"
+#   apiKey: "your-api-key"
+#   baseUrl: "http://localhost:1234/v1"
+# 
+# # OpenAI互換サーバー用Embedding設定
+# memory:
+#   enabled: true
+#   path: "file:./data/memory.db"
+#   vector:
+#     enabled: true
+#   embedding:
+#     provider: "openai"
+#     model: "text-embedding-3-large"
+#     apiKey: "your-api-key"
+#     baseUrl: "http://localhost:1234/v1"
+
+# Slack連携設定
+slack:
+  enabled: false
+  # botToken: "${SLACK_BOT_TOKEN}"
+  # appToken: "${SLACK_APP_TOKEN}"
+  # signingSecret: "${SLACK_SIGNING_SECRET}"
+  # channels:
+  #   - "general"
+  #   - "random"
+
+# ログ設定
+logging:
+  level: "info"  # debug | info | warn | error
+  format: "json"  # json | simple
+
+# サブエージェント設定
+# メインエージェントに加えて、特化したサブエージェントを定義できます
+# 各サブエージェントは独立のシステムプロンプトと命令を持ち、専用のLLMモデルを指定できます
+# mcpFile を指定すると、サブエージェント専用のMCPサーバー設定ファイルを読み込みます（未指定時はツールなし）
+subAgents:
+  # シンプルな応答専用エージェント
+  - id: "simple"
+    name: "Simple Response Agent"
+    description: "シンプルな応答に特化したエージェント"
+    systemPrompt: |
+      あなたはシンプルな応答エージェントです。
+      ユーザーの質問に対して、短く簡潔に答えてください。
+      専門用語は避け、誰にでも分かる言葉で答えてください。
+    instructions: |
+      - 常に日本語で応答してください
+      - 回答は1-2文に収めてください
+      - 不確かな場合は「わかりません」と答えてください
+    # 任意: LLMモデルのオーバーライド（未指定の場合はメインエージェントと同じモデルを使用）
+    # llm:
+    #   model: "gpt-4o-mini"
+
+  # 調査・リサーチ専用エージェント
+  - id: "research"
+    name: "Research Agent"
+    description: "調査・リサーチに特化したエージェント"
+    systemPrompt: |
+      あなたは調査・リサーチエージェントです。
+      ユーザーの質問に対して、詳細で正確な情報を提供してください。
+      必要に応じてツールを使用して情報を収集し、根拠を示してください。
+    instructions: |
+      - 常に日本語で応答してください
+      - 回答には情報源を明記してください
+      - 複数の視点から情報を分析してください
+      - 不確かな情報はその旨を明記してください
+    # 別のLLMモデルを使用する例
+    llm:
+      model: "gpt-4o"
+    # 個別MCPサーバー設定ファイル（調査用ツール群）
+    mcpFile: "config/sample.research.mcp.json"
+
+  # Bedrockプロバイダーを使用するエージェント
+  - id: "bedrock-agent"
+    name: "Bedrock Agent"
+    description: "AWS Bedrockを使用するエージェント"
+    systemPrompt: |
+      あなたはAWS Bedrockを利用するAIエージェントです。
+      高度な分析と推論を行ってください。
+    instructions: |
+      - 常に日本語で応答してください
+      - 論理的な思考プロセスを示してください
+      - 専門用語を適切に使用してください
+    # 完全なLLM設定オーバーライド
+    llm:
+      provider: "bedrock"
+      model: "anthropic.claude-3-sonnet-20240229-v1:0"
+      region: "us-west-2"
+      accessKeyId: "${AWS_ACCESS_KEY_ID}"
+      secretAccessKey: "${AWS_SECRET_ACCESS_KEY}"
+
+  # OpenAI互換サーバーを使用するエージェント
+  - id: "local-agent"
+    name: "Local Model Agent"
+    description: "ローカルLLMサーバーを使用するエージェント"
+    systemPrompt: |
+      あなたはローカルLLMモデルを利用するAIエージェントです。
+      プライバシーを重視した応答を提供してください。
+    instructions: |
+      - 常に日本語で応答してください
+      - ユーザーのプライバシーを尊重してください
+      - ローカル環境での実行に最適化してください
+    # OpenAI互換サーバーへの接続
+    llm:
+      provider: "openai"
+      model: "llama-3-8b-instruct"
+      apiKey: "not-required"
+      baseUrl: "http://localhost:1234/v1"
+
+  # GPT-5のreasoning機能を使用するエージェント
+  - id: "reasoning-agent"
+    name: "Advanced Reasoning Agent"
+    description: "高度な推論機能を使用するエージェント"
+    systemPrompt: |
+      あなたは高度な推論能力を持つAIエージェントです。
+      複雑な問題解決と深い分析を行ってください。
+    instructions: |
+      - 常に日本語で応答してください
+      - 段階的な思考プロセスを示してください
+      - 複数の解決策を比較検討してください
+    # GPT-5のreasoning設定
+    llm:
+      provider: "openai"
+      model: "gpt-5"
+      apiKey: "${OPENAI_API_KEY}"
+      reasoning:
+        effort: "high"  # minimal | low | medium | high
+
+# 環境変数の例:
+# export OPENAI_API_KEY="your-openai-api-key"
+# export AWS_ACCESS_KEY_ID="your-aws-access-key"
+# export AWS_SECRET_ACCESS_KEY="your-aws-secret-key"
+# export AWS_REGION="us-east-1"
+
+# サブエージェントのAPI利用例:
+# curl -X POST http://localhost:3141/agents/simple/text \
+#   -H "Content-Type: application/json" \
+#   -d '{"input": "こんにちは"}'
+#
+# curl -X POST http://localhost:3141/agents/research/text \
+#   -H "Content-Type: application/json" \
+#   -d '{"input": "最新のAI技術について調査してください"}'

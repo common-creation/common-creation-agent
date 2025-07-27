@@ -1,0 +1,59 @@
+{
+  "name": "common-creation-agent",
+  "version": "1.0.0",
+  "description": "汎用AIエージェントシステム - voltagent.devプラットフォームを基盤とした統合AIエージェント",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx --watch --watch-path ./src --watch-path ./config ./src/index.ts",
+    "start": "tsx ./src/index.ts",
+    "volt": "volt",
+    "test": "vitest",
+    "test:run": "vitest --run",
+    "test:mcp": "npm run build && node dist/integration/mcp-tool-test.js",
+    "test:time": "npm run build && node dist/integration/time-mcp-test.js",
+    "test:e2e": "npm run build && node dist/test/e2e-time-test.js",
+    "lint": "biome check src",
+    "lint:fix": "biome check --write src",
+    "format": "biome format --write src",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "ai",
+    "agent",
+    "llm",
+    "mcp",
+    "slack",
+    "voltagent"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@ai-sdk/amazon-bedrock": "^3.0.43",
+    "@ai-sdk/openai": "^2.0.52",
+    "@ai-sdk/openai-compatible": "^1.0.22",
+    "@slack/bolt": "^3.21.4",
+    "@types/uuid": "^10.0.0",
+    "@voltagent/core": "^1.1.29",
+    "@voltagent/libsql": "^1.0.8",
+    "@voltagent/logger": "^1.0.2",
+    "@voltagent/server-hono": "^1.0.18",
+    "ai": "^5.0.76",
+    "axios": "^1.12.2",
+    "dotenv": "^17.2.3",
+    "slackify-markdown": "^4.5.0",
+    "uuid": "^13.0.0",
+    "winston": "^3.18.3",
+    "yaml": "^2.8.1"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.1.2",
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

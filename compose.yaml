@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  common-creation-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: common-creation-agent
+    restart: unless-stopped
+    ports:
+      - "3141:3141"
+    volumes:
+      # 設定ファイルをマウント
+      - ./config:/app/config:ro
+      # データディレクトリをマウント（永続化）
+      - ./data:/app/data
+      # ログファイル用
+      - agent-logs:/app/logs
+      # Dockerソケットをマウント（MCPサーバーでDocker操作が必要な場合）
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - agent-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3141/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # オプション: Redis（セッション管理やキャッシュ用）
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: common-creation-agent-redis
+  #   restart: unless-stopped
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - redis-data:/data
+  #   networks:
+  #     - agent-network
+  #   command: redis-server --appendonly yes
+  #   profiles:
+  #     - redis
+
+  # オプション: PostgreSQL（データ永続化用）
+  # postgres:
+  #   image: postgres:15-alpine
+  #   container_name: common-creation-agent-postgres
+  #   restart: unless-stopped
+  #   ports:
+  #     - "5432:5432"
+  #   environment:
+  #     - POSTGRES_DB=${POSTGRES_DB:-agent_db}
+  #     - POSTGRES_USER=${POSTGRES_USER:-agent}
+  #     - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-agent_password}
+  #   volumes:
+  #     - postgres-data:/var/lib/postgresql/data
+  #   networks:
+  #     - agent-network
+  #   profiles:
+  #     - postgres
+
+volumes:
+  agent-logs:
+  # redis-data:
+  # postgres-data:
+
+networks:
+  agent-network:
+    driver: bridge
