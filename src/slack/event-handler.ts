@@ -116,6 +116,9 @@ export class SlackEventHandlerImpl implements SlackEventHandler {
           if (error instanceof Error && error.message.includes('call tool')) {
             cleanedText = `${cleanedText}\n\n[TOOL CALL ERROR] ${error instanceof Error ? error.message : 'Unknown error'}`;
           }
+          if (error instanceof Error && error.message.includes('fucntion')) {
+            cleanedText = `${cleanedText}\n\n[FUNCTION CALL ERROR] ${error instanceof Error ? error.message : 'Unknown error'}`;
+          }
         }
       }
 
