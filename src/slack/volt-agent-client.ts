@@ -48,7 +48,8 @@ export class VoltAgentApiClient implements VoltAgentClient {
     message: string,
     sessionId: string,
     userId: string,
-    channelId?: string
+    channelId?: string,
+    threadHistoryContext?: string
   ): Promise<AgentApiResponse> {
     const url = `${this.baseUrl}/agents/main/text-custom`
 
@@ -57,8 +58,13 @@ export class VoltAgentApiClient implements VoltAgentClient {
       try { return JSON.stringify(message) } catch { return String(message) }
     })()
 
+    // スレッド履歴がある場合は入力の先頭に追加
+    const finalInput = threadHistoryContext
+      ? `${threadHistoryContext}\n\n${safeMessage}`
+      : safeMessage
+
     const requestBody = {
-      input: safeMessage,
+      input: finalInput,
       options: {
         userId: userId,
         conversationId: sessionId,
@@ -134,7 +140,8 @@ export class VoltAgentApiClient implements VoltAgentClient {
     content: ContentPart[],
     sessionId: string,
     userId: string,
-    channelId?: string
+    channelId?: string,
+    threadHistoryContext?: string
   ): Promise<AgentApiResponse> {
     const url = `${this.baseUrl}/agents/main/text-custom`
 
@@ -147,6 +154,12 @@ export class VoltAgentApiClient implements VoltAgentClient {
     const nonTextParts = content.filter((c): c is { type: 'image'; image: string; mimeType?: string } => c.type === 'image')
 
     let combined: string = ''
+
+    // スレッド履歴がある場合は先頭に追加
+    if (threadHistoryContext) {
+      combined = threadHistoryContext + '\n\n'
+    }
+
     if (textParts.length > 0) {
       combined += textParts.join('\n')
     }

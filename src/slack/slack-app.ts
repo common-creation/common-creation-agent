@@ -9,7 +9,7 @@ import axios from 'axios'
 const { App, LogLevel } = bolt
 
 import type { Logger } from '../core/interfaces.js'
-import type { SlackConfig, SlackEventHandler, SlackMessageContext, SlackService, SlackFile, SlackFileShareEvent } from './types.js'
+import type { SlackConfig, SlackEventHandler, SlackMessageContext, SlackService, SlackFile, SlackFileShareEvent, ThreadMessage } from './types.js'
 
 export class SlackApp implements SlackService {
   private app: any // Slack Bolt Appインスタンス
@@ -282,12 +282,72 @@ export class SlackApp implements SlackService {
 
       // Base64エンコード
       const base64 = Buffer.from(response.data).toString('base64')
-      
+
       // Data URIフォーマットで返す
       return `data:${file.mimetype};base64,${base64}`
     } catch (error) {
       this.logger?.error('Failed to download file', error)
       throw error
+    }
+  }
+
+  /**
+   * スレッド内のメッセージ履歴を取得
+   * 環境変数 SLACK_LOOKUP_THREAD_HISTORY=1 の場合のみ有効
+   */
+  async getThreadReplies(channelId: string, threadTs: string, limit: number = 50): Promise<ThreadMessage[]> {
+    try {
+      const result = await this.app.client.conversations.replies({
+        token: this.config.botToken,
+        channel: channelId,
+        ts: threadTs,
+        limit,
+        inclusive: true, // スレッドの最初のメッセージも含める
+      })
+
+      if (!result.messages || result.messages.length === 0) {
+        return []
+      }
+
+      // ThreadMessage形式に変換
+      const threadMessages: ThreadMessage[] = result.messages.map((msg: any) => ({
+        user: msg.user || msg.bot_id || 'unknown',
+        text: msg.text || '',
+        ts: msg.ts,
+        botId: msg.bot_id,
+        userName: undefined, // 必要に応じて後でユーザー情報を取得
+      }))
+
+      this.logger?.debug(`Retrieved ${threadMessages.length} messages from thread ${threadTs}`)
+      return threadMessages
+    } catch (error) {
+      this.logger?.error('Failed to get thread replies', error)
+      // エラー時は空配列を返す（フォールバック）
+      return []
+    }
+  }
+
+  /**
+   * チャンネルかどうかを判定（DM/MPDMを除外）
+   */
+  async isChannel(channelId: string): Promise<boolean> {
+    try {
+      const channelInfo = await this.app.client.conversations.info({
+        token: this.config.botToken,
+        channel: channelId,
+      })
+
+      // DM（is_im=true）またはMPDM（is_mpim=true）の場合はfalse
+      if (channelInfo.channel?.is_im || channelInfo.channel?.is_mpim) {
+        return false
+      }
+
+      // それ以外（パブリックチャンネル、プライベートチャンネル）はtrue
+      return true
+    } catch (error) {
+      this.logger?.warn('Failed to check channel type', error)
+      // エラー時はfalseを返す（安全側に倒す）
+      return false
     }
   }
 }

@@ -21,6 +21,17 @@ export interface SlackMessageContext {
 }
 
 /**
+ * Slackスレッドメッセージ
+ */
+export interface ThreadMessage {
+  user: string
+  text: string
+  ts: string
+  botId?: string
+  userName?: string
+}
+
+/**
  * Slackアプリケーション設定
  */
 export interface SlackConfig {
@@ -41,6 +52,8 @@ export interface SlackService {
   addReaction(channelId: string, timestamp: string, reaction: string): Promise<void>
   removeReaction(channelId: string, timestamp: string, reaction: string): Promise<void>
   downloadFileAsBase64(file: SlackFile): Promise<string>
+  getThreadReplies(channelId: string, threadTs: string, limit?: number): Promise<ThreadMessage[]>
+  isChannel(channelId: string): Promise<boolean>
 }
 
 /**
@@ -91,14 +104,16 @@ export interface VoltAgentClient {
     message: string,
     sessionId: string,
     userId: string,
-    channelId?: string
+    channelId?: string,
+    threadHistoryContext?: string
   ): Promise<AgentApiResponse>
-  
+
   sendMultiModalMessage(
     content: ContentPart[],
     sessionId: string,
     userId: string,
-    channelId?: string
+    channelId?: string,
+    threadHistoryContext?: string
   ): Promise<AgentApiResponse>
 }
 
@@ -123,4 +138,5 @@ export interface MessageFormatter {
   formatErrorMessage(error: Error | string): string
   extractMentionText(text: string, botUserId: string): string
   splitLongMessage(message: string, maxLength?: number): string[]
+  formatThreadHistory(messages: ThreadMessage[]): string
 }

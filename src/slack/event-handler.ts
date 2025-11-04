@@ -71,12 +71,41 @@ export class SlackEventHandlerImpl implements SlackEventHandler {
       // タイピングインジケーターを表示（Slack APIでは直接サポートされていないため、リアクションで代替）
       await this.addReaction(channel, ts, 'thinking_face')
 
+      // スレッド履歴を取得（環境変数とチャンネル条件をチェック）
+      let threadHistoryContext: string | undefined
+      const isThreadHistoryEnabled = process.env.SLACK_LOOKUP_THREAD_HISTORY === '1'
+
+      if (isThreadHistoryEnabled && thread_ts) {
+        // チャンネルかどうかを判定（DM/MPDMを除外）
+        const isChannel = await this.slackService.isChannel(channel)
+
+        if (isChannel) {
+          this.logger?.debug('Fetching thread history', {
+            channel,
+            threadTs: thread_ts,
+          })
+
+          const threadMessages = await this.slackService.getThreadReplies(channel, thread_ts, 50)
+
+          if (threadMessages.length > 0) {
+            // 最新のメッセージを除外（現在のメッセージなので重複を避ける）
+            const historyMessages = threadMessages.filter(msg => msg.ts !== ts)
+
+            if (historyMessages.length > 0) {
+              threadHistoryContext = this.messageFormatter.formatThreadHistory(historyMessages)
+              this.logger?.info(`Retrieved ${historyMessages.length} thread messages for context`)
+            }
+          }
+        }
+      }
+
       // VoltAgent APIにメッセージを送信
       const response = await this.voltAgentClient.sendMessage(
         cleanedText,
         conversationId,
         context.userId,
-        context.channelId
+        context.channelId,
+        threadHistoryContext
       )
 
       // リアクションを削除
@@ -208,9 +237,37 @@ export class SlackEventHandlerImpl implements SlackEventHandler {
       // タイピングインジケーター
       await this.addReaction(channel, ts, 'thinking_face')
 
+      // スレッド履歴を取得（環境変数とチャンネル条件をチェック）
+      let threadHistoryContext: string | undefined
+      const isThreadHistoryEnabled = process.env.SLACK_LOOKUP_THREAD_HISTORY === '1'
+
+      if (isThreadHistoryEnabled && thread_ts) {
+        // チャンネルかどうかを判定（DM/MPDMを除外）
+        const isChannel = await this.slackService.isChannel(channel)
+
+        if (isChannel) {
+          this.logger?.debug('Fetching thread history for file share', {
+            channel,
+            threadTs: thread_ts,
+          })
+
+          const threadMessages = await this.slackService.getThreadReplies(channel, thread_ts, 50)
+
+          if (threadMessages.length > 0) {
+            // 最新のメッセージを除外（現在のメッセージなので重複を避ける）
+            const historyMessages = threadMessages.filter(msg => msg.ts !== ts)
+
+            if (historyMessages.length > 0) {
+              threadHistoryContext = this.messageFormatter.formatThreadHistory(historyMessages)
+              this.logger?.info(`Retrieved ${historyMessages.length} thread messages for file share context`)
+            }
+          }
+        }
+      }
+
       // 画像をダウンロードしてBase64エンコード
       const imageContents: ContentPart[] = []
-      
+
       for (const file of imageFiles) {
         try {
           const base64Image = await this.slackService.downloadFileAsBase64(file)
@@ -230,7 +287,7 @@ export class SlackEventHandlerImpl implements SlackEventHandler {
 
       // テキストメッセージとコンバイン
       const content: ContentPart[] = []
-      
+
       // テキストがある場合は追加
       if (text) {
         content.push({
@@ -253,7 +310,8 @@ export class SlackEventHandlerImpl implements SlackEventHandler {
         content,
         conversationId,
         context.userId,
-        context.channelId
+        context.channelId,
+        threadHistoryContext
       )
 
       // リアクションを削除

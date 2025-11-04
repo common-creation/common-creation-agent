@@ -4,7 +4,8 @@
       "WebFetch(domain:voltagent.dev)",
       "WebFetch(domain:api.slack.com)",
       "WebFetch(domain:www.npmjs.com)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(find:*)"
     ],
     "deny": []
   }
