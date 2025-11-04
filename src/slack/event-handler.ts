@@ -103,6 +103,7 @@ export class SlackEventHandlerImpl implements SlackEventHandler {
       let response: AgentApiResponse;
       // VoltAgent APIにメッセージを送信
       for (let attempt = 1; attempt <= 5; attempt++) {
+        this.logger?.info(`Sending message to VoltAgent API, attempt ${attempt}`)
         try {
           response = await this.voltAgentClient.sendMessage(
             cleanedText,
