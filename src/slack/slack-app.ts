@@ -189,8 +189,8 @@ export class SlackApp implements SlackService {
           channel: event.channel,
         })
 
-        // DMまたはプライベートチャンネルの場合のみ処理
-        if (channelInfo.channel?.is_im || channelInfo.channel?.is_private) {
+        // DMの場合のみ処理（プライベートチャンネルとマルチユーザーDMは除外）
+        if (channelInfo.channel?.is_im) {
           await this.eventHandler.handleMessage(event, context)
         }
       } catch (error) {
