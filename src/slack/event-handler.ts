@@ -113,7 +113,9 @@ export class SlackEventHandlerImpl implements SlackEventHandler {
           );
         } catch (error) {
           this.logger?.warn(`Attempt ${attempt} to send message failed`, error)
-          cleanedText = `${cleanedText}\n\n\n[LAST ERROR] ${error instanceof Error ? error.message : 'Unknown error'}`;
+          if (error instanceof Error && error.message.includes('call tool')) {
+            cleanedText = `${cleanedText}\n\n[TOOL CALL ERROR] ${error instanceof Error ? error.message : 'Unknown error'}`;
+          }
         }
       }
 
