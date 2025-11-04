@@ -12,6 +12,7 @@ import type {
   SlackService,
   VoltAgentClient,
   SlackFileShareEvent,
+  AgentApiResponse,
 } from './types.js'
 
 export class SlackEventHandlerImpl implements SlackEventHandler {
@@ -48,7 +49,7 @@ export class SlackEventHandlerImpl implements SlackEventHandler {
 
     // メンションテキストからボットメンションを削除
     const safeText = text || ''
-    const cleanedText = this.botUserId
+    let cleanedText = this.botUserId
       ? this.messageFormatter.extractMentionText(safeText, this.botUserId)
       : safeText
 
@@ -99,17 +100,29 @@ export class SlackEventHandlerImpl implements SlackEventHandler {
         }
       }
 
+      let response: AgentApiResponse;
       // VoltAgent APIにメッセージを送信
-      const response = await this.voltAgentClient.sendMessage(
-        cleanedText,
-        conversationId,
-        context.userId,
-        context.channelId,
-        threadHistoryContext
-      )
+      for (let attempt = 1; attempt <= 5; attempt++) {
+        try {
+          response = await this.voltAgentClient.sendMessage(
+            cleanedText,
+            conversationId,
+            context.userId,
+            context.channelId,
+            threadHistoryContext
+          );
+        } catch (error) {
+          this.logger?.warn(`Attempt ${attempt} to send message failed`, error)
+          cleanedText = `${cleanedText}\n\n\n[LAST ERROR] ${error instanceof Error ? error.message : 'Unknown error'}`;
+        }
+      }
 
       // リアクションを削除
       await this.removeReaction(channel, ts, 'thinking_face')
+
+      if (!response!) {
+        throw new Error('Failed to get response from VoltAgent API after multiple attempts')
+      }
 
       // レスポンスをフォーマット
       const formattedMessage = this.messageFormatter.formatAgentResponse(response)
